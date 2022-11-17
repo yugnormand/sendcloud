@@ -1,0 +1,29 @@
+{
+    "name": "todocoding/sendcloud",
+    "description": "Laravel SendCloud Shipping API",
+    "type": "projet",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Todocoding\\Sendcloud\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Yug Normand Ngangue Fosso",
+            "email": "yugnormandngangue@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Todocoding\\Sendcloud\\SendcloudServiceProvider"
+            ],
+            "aliases": {
+                "Insee": "Todocoding\\Sendcloud\\Facades\\Sendcloud"
+            }
+        }
+    }
+}
