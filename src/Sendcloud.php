@@ -2,11 +2,12 @@
 
 namespace Todocoding\Sendcloud;
 
+use Illuminate\Support\Facades\Storage;
 
 Class Sendcloud
 {
 
-  public function getshippingmethod(){
+  public function getshippingmethod($country,$model){
 
     $shippingMethods =null;
     $apiKey = config('sendcloud.consumer_key');
@@ -38,43 +39,59 @@ Class Sendcloud
                 throw new Exception($data_string->error->message);
 
             } else {
-                $shippingMethods = dd($data_string);//$this->getfilterShipping($data_string);
+                $shippingMethods = $this->getfilterShipping($data_string,$country,$model);
             }
 
         }  catch(\Exception $e) {
             $e->getMessage();
         }
 
+        //dd($data_string);
         return $shippingMethods;
   }
 
-  public function getfilterShipping($shippingMethods,$cartCounty){
+  public function getfilterShipping($shippingMethods,$cartCounty,$model){
 
-    $selectedServices = [''];
 
-    //$cart = Cart::getCart();
-    //$cartCounty = $cart->shipping_address->country;
 
-        // Print country wise prices for all enabled shipping methods
         foreach ($shippingMethods as $shippingMethod) {
+
             foreach ($shippingMethod as $key => $shippingServices) {
-                if (in_array($shippingServices->id, $selectedServices)) {
 
                     foreach ($shippingServices->countries as $countryWiseShipping) {
-                        if ($countryWiseShipping->iso_2 == $cartCounty) {
+
+                        if($model == 1){
+
+                          if (($countryWiseShipping->name == $cartCounty) && ($shippingServices->max_weight < 0.56 &&
+                            $shippingServices->min_weight > 0.24 )) {
 
                             $price = $countryWiseShipping->price;
-
                             $services[$shippingServices->id] = [
                                 'name' => $shippingServices->name,
+                                'carrier' => $shippingServices->carrier,
                                 'price' => $price,
+                                'min_weight' =>$shippingServices->min_weight,
+                                'max_weight' =>$shippingServices->max_weight,
+                                'service_point_input' => $shippingServices->service_point_input
                             ];
+                          }
+                        }else{
+                          if ($countryWiseShipping->name == $cartCounty) {
+
+                            $price = $countryWiseShipping->price;
+                            $services[$shippingServices->id] = [
+                                'name' => $shippingServices->name,
+                                'carrier' => $shippingServices->carrier,
+                                'price' => $price,
+                                'min_weight' =>$shippingServices->min_weight,
+                                'max_weight' =>$shippingServices->max_weight,
+                                'service_point_input' => $shippingServices->service_point_input
+                            ];
+                          }
                         }
                     }
-                }
             }
         }
-
         return $services;
   }
 
@@ -144,10 +161,6 @@ Class Sendcloud
 
         $apiKey = config('sendcloud.consumer_key');
         $secretKey = config('sendcloud.consumer_secret');
-
-        //$shipmentFromApi = Sendcloud::where('shipment_id' , $shipmentId)->first();
-
-        //$parcelId = Sendcloud::where('shipment_id' , $shipmentId)->first()->parcel_id;
 
         if ($shipmentFromApi == null) {
             return 'manual_shipment';
