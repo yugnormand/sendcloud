@@ -2,6 +2,7 @@
 
 namespace Todocoding\Sendcloud;
 
+use Exception;
 use Illuminate\Support\Facades\Storage;
 
 Class Sendcloud
@@ -46,7 +47,7 @@ Class Sendcloud
             $e->getMessage();
         }
 
-        //dd($data_string);
+        //dd($shippingMethods);
         return $shippingMethods;
   }
 
@@ -62,8 +63,8 @@ Class Sendcloud
 
                         if($model == 1){
 
-                          if (($countryWiseShipping->name == $cartCounty) && ($shippingServices->max_weight < 0.56 &&
-                            $shippingServices->min_weight > 0.24 )) {
+                          if (($countryWiseShipping->name == $cartCounty) && ($shippingServices->max_weight == 1000.000 &&
+                            $shippingServices->min_weight == 0.001 )) {
 
                             $price = $countryWiseShipping->price;
                             $services[$shippingServices->id] = [
@@ -100,27 +101,26 @@ Class Sendcloud
     $apiKey = config('sendcloud.consumer_key');
     $secretKey = config('sendcloud.consumer_secret');
 
-    $billingAddress = $order;
-    $shipmentId = $billingAddress['shipping_method'];
+    $shipmentId = $order['shipping_id'];
 
         $data['parcel'] = [
-            "name" =>  $billingAddress['name'],
-            "company_name" => $billingAddress['company_name'],
-            "address" => $billingAddress['address1'],
-            "house_number" => $billingAddress['address2'],
-            "city" =>  $billingAddress['city'],
-            "postal_code" => $billingAddress['postcode'],
-            "telephone" => $billingAddress['phone'],
+            "name" => $order['name'],
+            "company_name" => $order['company_name'],
+            "address" => $order['address'],
+            "house_number" => $order['address2'],
+            "city" => $order['city'],
+            "postal_code" => $order['postcode'],
+            "telephone" => $order['phone'],
             "request_label" => true,
-            "email" => $billingAddress['email'],
+            "email" => $order['email'],
             "data" => [],
-            "country" => $billingAddress['country'],
+            "country" => $order['countrycode'],
             "shipment" => [
                 "id" => $shipmentId
             ],
 
             "weight" => $weight,
-            "order_number" => $billingAddress['id'],
+            "order_number" => $order['id'],
         ];
 
         $data_string = json_encode($data);
@@ -142,11 +142,13 @@ Class Sendcloud
 
         $result = curl_exec($ch);
 
+
         $resultArray = json_decode($result);
+
 
         if (isset($resultArray) && $resultArray != null && !isset($resultArray->error)) {
 
-            return $result;
+            return $resultArray;
         } else {
             if (isset($resultArray->error)) {
 
@@ -157,14 +159,10 @@ Class Sendcloud
         }
   }
 
-  public function getLabelPdf($shipmentId,$labelFormate,$shipmentFromApi,$parcelId){
+  public function getLabelPdf($shipmentId,$labelFormate,$parcelId){
 
         $apiKey = config('sendcloud.consumer_key');
         $secretKey = config('sendcloud.consumer_secret');
-
-        if ($shipmentFromApi == null) {
-            return 'manual_shipment';
-        }
 
         if ($labelFormate == 4) {
             $url = 'https://panel.sendcloud.sc/api/v2/labels/label_printer/' . $parcelId;
@@ -191,11 +189,11 @@ Class Sendcloud
 
         $fileName = 'ShipmentLabel_' . $shipmentId . '_' . $labelFormate . '.pdf';
 
-        $filepath = storage_path('app/public/shipping-label/') . $fileName ;
+        $filepath = base_path('storage/app/public/shipping-label/'. $fileName) ;
 
         if (Storage::exists($filepath) == false) {
 
-            Storage::makeDirectory('shipping-label/');
+            Storage::makeDirectory('public/shipping-label/');
         }
 
         $file = fopen($filepath, 'w+');
@@ -203,6 +201,32 @@ Class Sendcloud
 
         fclose($file);
 
-        return $filepath;
+        return $fileName;
+  }
+
+  public function cancelShipment($parcelId){
+        $apiKey = config('sendcloud.consumer_key');
+        $secretKey = config('sendcloud.consumer_secret');
+
+        $url = 'https://panel.sendcloud.sc/api/v2/parcels/'.$parcelId.'/cancel';
+
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $apiKey.':'.$secretKey);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/pdf')
+        );
+
+        $resultdata = curl_exec($ch);
+
+        return $resultdata;
   }
 }
