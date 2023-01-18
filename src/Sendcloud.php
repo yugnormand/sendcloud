@@ -214,7 +214,7 @@ Class Sendcloud
 
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -227,6 +227,6 @@ Class Sendcloud
 
         $resultdata = curl_exec($ch);
 
-        return $resultdata;
+        return json_decode($resultdata);
   }
 }
