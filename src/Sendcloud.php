@@ -4,6 +4,7 @@ namespace Todocoding\Sendcloud;
 
 use Exception;
 use Illuminate\Support\Facades\Storage;
+use JsonException;
 
 Class Sendcloud
 {
@@ -14,10 +15,9 @@ Class Sendcloud
     $apiKey = config('sendcloud.consumer_key');
     $secretKey = config('sendcloud.consumer_secret');
 
-        try {
+    try{
 
             $ch = curl_init();
-
             curl_setopt($ch, CURLOPT_URL, "https://panel.sendcloud.sc/api/v2/shipping_methods");
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
@@ -43,7 +43,7 @@ Class Sendcloud
                 $shippingMethods = $this->getfilterShipping($data_string,$country,$model);
             }
 
-        }  catch(\Exception $e) {
+        }catch(\Exception $e) {
             $e->getMessage();
         }
 
@@ -63,8 +63,7 @@ Class Sendcloud
 
                         if($model == 1){
 
-                          if (($countryWiseShipping->name == $cartCounty) && ($shippingServices->max_weight == 1000.000 &&
-                            $shippingServices->min_weight == 0.001 )) {
+                          if (($countryWiseShipping->name == $cartCounty) && ($shippingServices->max_weight <= 0.55 )) {
 
                             $price = $countryWiseShipping->price;
                             $services[$shippingServices->id] = [
@@ -187,7 +186,7 @@ Class Sendcloud
 
         $resultdata = curl_exec($ch);
 
-        $fileName = 'ShipmentLabel_' . $shipmentId . '_' . $labelFormate . '.pdf';
+        $fileName = 'ShipmentLabel_' . uniqid() . '_' . $labelFormate . '.pdf';
 
         $filepath = base_path('storage/app/public/shipping-label/'. $fileName) ;
 
@@ -222,10 +221,37 @@ Class Sendcloud
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Type: application/pdf')
+            'Content-Type: application/json')
         );
 
         $resultdata = curl_exec($ch);
+
+        return json_decode($resultdata);
+  }
+
+  public function trackShipment($tracknumber){
+        $apiKey = config('sendcloud.consumer_key');
+        $secretKey = config('sendcloud.consumer_secret');
+
+        $url = 'https://panel.sendcloud.sc/api/v2/tracking/'.$tracknumber;
+
+        $ch = curl_init();
+
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, $apiKey.':'.$secretKey);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Accept: application/json',
+            'Content-Type: application/json')
+            );
+
+        $resultdata = curl_exec($ch);
+        $err = curl_error($ch);
 
         return json_decode($resultdata);
   }
